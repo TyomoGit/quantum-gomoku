@@ -12,7 +12,7 @@ let boardSize = 18;
 
 class GameController {
     static shared = new GameController();
-    
+
     isObserving = false;
     board = new Array(boardSize).fill(null).map(() => new Array(boardSize).fill(null));
     currentPlayer = Player.BLACK;
@@ -50,17 +50,19 @@ init();
 
 
 
-await listen("turn", (e) => {
+listen("turn", (e) => {
     const data = e.payload as {player: string, p: number};
+    
+    console.log(playerFromString(data.player), data.player);
     
     GameController.shared.currentPlayer = playerFromString(data.player);
     GameController.shared.currentStoneP = data.p;
-    
 
     setTurnDisplay();
+    
 });
 
-await listen("winner", (e) => {
+listen("winner", (e) => {
     const winner = e.payload as string;
 
     if (!winner) return;
@@ -95,12 +97,11 @@ function numberToPlayer(num: number): Player {
 
 function playerFromString(str: string): Player {
     switch(str) {
+        default:
         case "black":
                 return Player.BLACK;
         case "white":
                 return Player.WHITE;
-        default:
-                return Player.BLACK;
     }
 }
 

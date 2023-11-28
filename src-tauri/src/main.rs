@@ -26,8 +26,10 @@ fn main() {
             let main_window = app.get_window("main").unwrap();
             main_window
                 .set_title("量子五目並べ")
+                .expect("failed to set title");
+            main_window
                 .set_size(LogicalSize::new(610.0, 850.0))
-                .unwrap();
+                .expect("failed to set size");
             Ok(())
         })
         .manage(MyState::new())
@@ -142,7 +144,10 @@ async fn observe<R: Runtime>(
     });
 
     window
-        .emit("turn", game.turn().to_string())
+        .emit("turn", TurnInfo {
+            player: game.turn().to_string(),
+            p: game.get_turn_p(),
+        })
         .map_err(|err| err.to_string())?;
 
     let winners = game.get_winners();
