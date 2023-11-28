@@ -6,17 +6,22 @@ const canvas = document.getElementById('board') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 const observeButton = document.getElementById('observeButton') as HTMLButtonElement;
 const turnDisplay = document.getElementById('turn') as HTMLParagraphElement;
-const gridSize = 30;
-const stoneRadius = 14;
-let boardSize = 18;
+const GRID_SIZE = 30;
+const STONE_RAD = 14;
+let BOARD_SIZE = 18;
 
 class GameController {
     static shared = new GameController();
 
     isObserving = false;
-    board = new Array(boardSize).fill(null).map(() => new Array(boardSize).fill(null));
+    board = new Array(BOARD_SIZE).fill(null).map(() => new Array(BOARD_SIZE).fill(null));
     currentPlayer = Player.BLACK;
     currentStoneP = Color.P_90;
+}
+
+class ObserveController {
+    static shared = new ObserveController();
+    prevBoard = Array.from(GameController.shared.board, (row) => Array.from(row));
 }
 
 enum Color {
@@ -35,11 +40,11 @@ enum Player {
 
 function init() {
     invoke("get_board_size").then((size) => {
-        boardSize = size as number;
+        BOARD_SIZE = size as number;
     });
     initEventListeners();
     initObserveButton();
-    drawGrid();
+    drawBoardGrid();
     setTurnDisplay();
 
     invoke("init_game");
@@ -47,7 +52,6 @@ function init() {
 }
 
 init();
-
 
 
 listen("turn", (e) => {
@@ -118,34 +122,34 @@ async function initEventListeners() {
     canvas.addEventListener('mousemove', (event) => {
         if (GameController.shared.isObserving) return;
 
-        const { x, y } = getMousePosition(event);
+        const { x, y } = getCursorCoordinate(event);
         const { row, col } = positionToCoordinate(x, y);
         const controller = GameController.shared;
         if (isValidMove(row, col)) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawGrid();
+            drawBoardGrid();
             controller.board.forEach((row, rowIndex) =>
                     row.forEach((stone, colIndex) => {
                             if (stone) {
-                                    drawStone(gridSize + colIndex * gridSize, gridSize + rowIndex * gridSize, stone);
+                                    drawStone(GRID_SIZE + colIndex * GRID_SIZE, GRID_SIZE + rowIndex * GRID_SIZE, stone);
                             }
             }));
             
-            drawStone(gridSize + col * gridSize, gridSize + row * gridSize, playerToColor(controller.currentPlayer), 0.5);
+            drawStone(GRID_SIZE + col * GRID_SIZE, GRID_SIZE + row * GRID_SIZE, playerToColor(controller.currentPlayer), 0.5);
         }
     });
     
     canvas.addEventListener('click', (event) => {
         if (GameController.shared.isObserving) return;
 
-        const { x, y } = getMousePosition(event);
+        const { x, y } = getCursorCoordinate(event);
         const { row, col } = positionToCoordinate(x, y);
         // const controller = GameController.shared;
         if (isValidMove(row, col)) {
             placeStoneProbability(row, col);
             let debugCount = 0;
-            for (let i = 0; i < boardSize; i++) {
-                for (let j = 0; j < boardSize; j++) {
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
                     if (GameController.shared.board[i][j] != null) {
                         debugCount++;
                     }
@@ -161,20 +165,20 @@ async function initEventListeners() {
 }
 
 
-function drawGrid() {
+function drawBoardGrid() {
     ctx.fillStyle = '#dcb35c';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.strokeStyle = 'black';
-    for (let i = 0; i < boardSize; i++) {
+    for (let i = 0; i < BOARD_SIZE; i++) {
         ctx.beginPath();
-        ctx.moveTo(gridSize + i * gridSize, gridSize);
-        ctx.lineTo(gridSize + i * gridSize, canvas.height - gridSize);
+        ctx.moveTo(GRID_SIZE + i * GRID_SIZE, GRID_SIZE);
+        ctx.lineTo(GRID_SIZE + i * GRID_SIZE, canvas.height - GRID_SIZE);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.moveTo(gridSize, gridSize + i * gridSize);
-        ctx.lineTo(canvas.width - gridSize, gridSize + i * gridSize);
+        ctx.moveTo(GRID_SIZE, GRID_SIZE + i * GRID_SIZE);
+        ctx.lineTo(canvas.width - GRID_SIZE, GRID_SIZE + i * GRID_SIZE);
         ctx.stroke();
     }
 }
@@ -188,7 +192,7 @@ function drawGrid() {
  */
 function drawStone(x: number, y: number, color: Color, opacity = 1) {
     ctx.beginPath();
-    ctx.arc(x, y, stoneRadius, 0, 2 * Math.PI);
+    ctx.arc(x, y, STONE_RAD, 0, 2 * Math.PI);
 
     let stoneText = "";
     let textColor = "";
@@ -244,7 +248,7 @@ function drawStone(x: number, y: number, color: Color, opacity = 1) {
  * @param {MouseEvent} event 
  * @returns {x: number, y: number} - マウスカーソルの座標
  */
-function getMousePosition(event: MouseEvent) {
+function getCursorCoordinate(event: MouseEvent) {
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -252,15 +256,15 @@ function getMousePosition(event: MouseEvent) {
 }
 
 /**
- * 座標を盤面の座標に変換する
+ * キャンバスの座標を盤面の位置に変換する
  * @param {number} x 
  * @param {number} y 
- * @returns 
+ * @returns 盤面の座標
  */
 function positionToCoordinate(x: number, y: number) {
     return {
-        row: Math.round((y - gridSize) / gridSize),
-        col: Math.round((x - gridSize) / gridSize),
+        row: Math.round((y - GRID_SIZE) / GRID_SIZE),
+        col: Math.round((x - GRID_SIZE) / GRID_SIZE),
     };
 }
 
@@ -275,7 +279,7 @@ function placeStoneProbability(row: number, col: number) {
     invoke("place_stone", { x: col, y: row}).then((p) => {
         const color = strToColor(`${p as number}`);
         GameController.shared.board[row][col] = color;
-        drawStone(gridSize + col * gridSize, gridSize + row * gridSize, color);
+        drawStone(GRID_SIZE + col * GRID_SIZE, GRID_SIZE + row * GRID_SIZE, color);
     }).catch(() => {
         invoke("get_board").then((board) => {
             console.log(board);
@@ -283,8 +287,12 @@ function placeStoneProbability(row: number, col: number) {
     });
 }
 
-
-
+/**
+ * 強制的に石を置く
+ * @param row 
+ * @param col 
+ * @param value 
+ */
 function placeStoneForce(row: number, col: number, value: Player) {
     const controller = GameController.shared;
     controller.board[row][col] = value;
@@ -299,7 +307,7 @@ function placeStoneForce(row: number, col: number, value: Player) {
             color = Color.WHITE;
             break;
     }
-    drawStone(gridSize + col * gridSize, gridSize + row * gridSize, color);
+    drawStone(GRID_SIZE + col * GRID_SIZE, GRID_SIZE + row * GRID_SIZE, color);
 }
 
 /**
@@ -309,25 +317,23 @@ function placeStoneForce(row: number, col: number, value: Player) {
  * @returns 
  */
 function isValidMove(row: number, col: number) {
-    return row >= 0 && col >= 0 && row < boardSize && col < boardSize && GameController.shared.board[row][col] == null;
+    return row >= 0 && col >= 0 && row < BOARD_SIZE && col < BOARD_SIZE && GameController.shared.board[row][col] == null;
 }
 
+/**
+ * 現在のターンを表示する
+ */
 function setTurnDisplay() {
     turnDisplay.innerHTML = "どちらかといえば<strong>"  + (GameController.shared.currentPlayer === Player.BLACK ? '黒' : '白') + "</strong>い方の番です";
 }
 
+/**
+ * 観測ボタンを初期化する
+ */
 function initObserveButton() {
     if (!observeButton) return;
     observeButton.innerHTML = "観測！";
     observeButton.disabled = false;
-}
-
-
-// let isObserving = false;
-
-class ObserveController {
-    static shared = new ObserveController();
-    prevBoard = Array.from(GameController.shared.board, (row) => Array.from(row));
 }
 
 /**
@@ -341,11 +347,11 @@ function observe() {
             gameC.isObserving = false;
             observeButton.innerHTML = "観測！";
             gameC.board = observeC.prevBoard;
-            drawGrid();
+            drawBoardGrid();
             gameC.board.forEach((row, rowIndex) =>
                     row.forEach((stone, colIndex) => {
                             if (stone) {
-                                    drawStone(gridSize + colIndex * gridSize, gridSize + rowIndex * gridSize, stone);
+                                    drawStone(GRID_SIZE + colIndex * GRID_SIZE, GRID_SIZE + rowIndex * GRID_SIZE, stone);
                             }
                     })
             );
@@ -375,7 +381,7 @@ function observe() {
 }
 
 /**
- * 
+ * 勝者が決定したときの処理
  * @param {Set<Player>} winners 
  */
 function winnerIsDecided(winner: Player) {
@@ -386,6 +392,9 @@ function winnerIsDecided(winner: Player) {
     console.log(msg);
 }
 
+/**
+ * restart関数をグローバルに登録する
+ */
 declare global {
     interface Window {
         restart: () => void;
@@ -393,10 +402,13 @@ declare global {
 }
 window.restart = restart;
 
+/**
+ * ゲームをリスタートする
+ */
 function restart() {
     const gameC = GameController.shared;
 
-    gameC.board = new Array(boardSize).fill(null).map(() => new Array(boardSize).fill(null));
+    gameC.board = new Array(BOARD_SIZE).fill(null).map(() => new Array(BOARD_SIZE).fill(null));
     gameC.currentPlayer = Player.BLACK;
     gameC.isObserving = false;
     init();
