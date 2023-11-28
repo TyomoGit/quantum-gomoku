@@ -12,4 +12,4 @@
 
 ## インストール
 Windows，macOS，Linuxで動作します．
-[Releasesのページ](https://github.com/TyomoGit/quantum-gomoku/releases)から，適当なものをダウンロードしてください．
+[Releasesのページ](https://github.com/TyomoGit/quantum-gomoku/releases)から，適当なものをダウンロードできます．
