@@ -1,7 +1,9 @@
 # quantum-gomoku
 
 「量子五目並べ」という，以下の動画[1]を参考にして作成したゲームです．**__すなわち，非公式です．__**
+
 [1][https://www.youtube.com/watch?v=mitAxA3f4U4](https://www.youtube.com/watch?v=mitAxA3f4U4)
+
 ルールについては，動画を参考にしてください．
 
 ## 独自のルール
